@@ -17,7 +17,7 @@
 	BootLoader.PlayAsBlue = true;
 	BootLoader.PlayAsRed = true;
 	BootLoader.Url = "http://localhost/";
-	BootLoader.TimeBetweenStepsMs = 1000;
+	BootLoader.TimeBetweenStepsMs = 100;
 
 	BootLoader.Run = function(s)
 	{
@@ -54,6 +54,7 @@
 	    var requestBody =
         {
             Turn: (gameData.turn ? "Red" : "Blue"),
+            Round: gameData.round,
             Board: []
         };
 

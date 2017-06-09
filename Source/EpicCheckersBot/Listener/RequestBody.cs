@@ -10,6 +10,7 @@ namespace EpicCheckersBot.Listener
     public class RequestBody
     {
         public Piece Turn { get; set; }
+        public int Round { get; set; }
         public Piece?[][] Board { get; set;}
     }
 

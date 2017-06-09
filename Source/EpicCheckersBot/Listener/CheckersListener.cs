@@ -55,7 +55,7 @@ namespace EpicCheckersBot.Listener
 
             var args = JsonConvert.DeserializeObject<RequestBody>(argsJson);
 
-            var game = new Game(new Board(args.Board));
+            var game = new Game(new Board(args.Round, args.Board));
             game.Board.RenderToConsole();
 
             var bestMove = game.GetBestMove(args.Turn);

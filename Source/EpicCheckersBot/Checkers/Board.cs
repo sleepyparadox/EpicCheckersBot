@@ -9,15 +9,18 @@ namespace EpicCheckersBot.Checkers
     public class Board
     {
         public const int Width = 8;
+        public int _round;
         Piece?[][] _pieces;
 
-        public Board(Piece?[][] pieces)
+        public Board(int round, Piece?[][] pieces)
         {
+            _round = round;
             _pieces = pieces;
         }
 
         public Board(bool newGame)
         {
+            _round = 0;
             _pieces = new Piece?[8][];
             for (int row = 0; row < Width; row++)
                 _pieces[row] = new Piece?[Width];
@@ -43,6 +46,8 @@ namespace EpicCheckersBot.Checkers
 
             SetPieceAt(from, null);
             SetPieceAt(to, piece);
+
+            _round++;
         }
 
         public IEnumerable<BoardPoint> GetEmptySpots(BoardPoint piecePoint, BoardPoint direction)
@@ -57,12 +62,12 @@ namespace EpicCheckersBot.Checkers
             }
         }
 
-
         public IEnumerable<KeyValuePair<BoardPoint, Piece?>> GetAllPieces()
         {
-            for (int row = 0; row < Width; row++)
+            var shrink = GetShrink(_round);
+            for (int row = shrink; row < Width - shrink; row++)
             {
-                for (int col = 0; col < Width; col++)
+                for (int col = shrink; col < Width - shrink; col++)
                 {
                     var point = new BoardPoint(row, col);
                     var piece = GetPieceAt(point);
@@ -95,17 +100,33 @@ namespace EpicCheckersBot.Checkers
             _pieces[row][col] = piece;
         }
 
-        public static bool WithinBoard(BoardPoint point)
+        public bool WithinBoard(BoardPoint point)
         {
             return WithinBoard(point.row, point.col);
         }
 
-        public static bool WithinBoard(int row, int col)
+        public bool WithinBoard(int row, int col)
         {
-            return row >= 0
-                && row < Width
-                && col >= 0
-                && col < Width;
+            var shrink = GetShrink(_round);
+            return row >= shrink
+                && row < Width - shrink
+                && col >= shrink
+                && col < Width - shrink;
+        }
+
+        static int GetShrink(int round)
+        {
+            // kills do resolve first
+            // board shrinks as final step of 30th, 50th and 60th turns
+
+            if (round >= 61) 
+                return 3;
+            else if (round >= 51)
+                return 2;
+            else if (round >= 31)
+                return 1;
+            else
+                return 0;
         }
     }
 }
