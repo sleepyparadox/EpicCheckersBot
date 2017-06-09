@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace EpicCheckersBot.Checkers
 {
-    public enum Team
+    public enum Piece
     {
         Blue,
         Red,

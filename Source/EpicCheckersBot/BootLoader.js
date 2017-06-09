@@ -14,8 +14,10 @@
 		
 	BootLoader.OldTurn = null;
 	BootLoader.CurrentSession = null;
-	BootLoader.IsRed = true;
+	BootLoader.PlayAsBlue = true;
+	BootLoader.PlayAsRed = true;
 	BootLoader.Url = "http://localhost/";
+	BootLoader.TimeBetweenStepsMs = 1000;
 
 	BootLoader.Run = function(s)
 	{
@@ -24,14 +26,15 @@
 		
 		BootLoader.Step();
 		
-		setTimeout(function(){ BootLoader.Run(s);}, 1000);
+		setTimeout(function () { BootLoader.Run(s); }, BootLoader.TimeBetweenStepsMs);
 	};
 	
 	BootLoader.Step = function()
 	{
-	    if(gameData.turn != BootLoader.OldTurn)
+	    if(gameData.turn != BootLoader.OldTurn && gameData.state === "playing")
 	    {
-	        if(gameData.turn == BootLoader.IsRed)
+	        if ((gameData.turn === true && BootLoader.PlayAsRed)
+                || (gameData.turn === false && BootLoader.PlayAsBlue))
 	        {
 	            BootLoader.TurnStarted();
 	        }
@@ -86,10 +89,13 @@
 	    console.log("Recieved move from [" + fromRow + ", " + fromCol + "] to [" + toRow + "," + toCol + "]");
 
 	    var pickedUnit = gameData.map[fromRow][fromCol];
-		
+
 	    gameData.map[toRow][toCol] = pickedUnit;
 	    gameData.map[fromRow][fromCol] = 0;
-		
+
+	    gameData.pick.r = toRow;
+	    gameData.pick.c = toCol;
+
 		
 	    var tileSize = boardGame.tileSprite.size
 		
@@ -99,11 +105,12 @@
 	    var unitArray = pickedUnit >= 20 ? boardGame.unit2 : boardGame.unit1;
 	    var unitIndex = pickedUnit >= 20 ? pickedUnit - 20 : pickedUnit - 10;
 		
-	    unitArray[unitIndex].setTargetPosition(boardGame.position.x + d, boardGame.position.y / 2 + f);
+	    unitArray[unitIndex].setTargetPosition(boardGame.position.x - d, boardGame.position.y / 2 + f);
 		
 	    gameData.state = "moveUnit";
 	};
 	
+    // CurrentSession garuantees old instances of BootLoader.js will be killed without refreshing page
 	var currentSession = Date();
 	BootLoader.CurrentSession = currentSession;
 	BootLoader.Run(currentSession);

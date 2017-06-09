@@ -46,17 +46,23 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Checkers\Team.cs" />
+    <Compile Include="Checkers\Board.cs" />
+    <Compile Include="Checkers\Game.cs" />
+    <Compile Include="Checkers\BoardPoint.cs" />
+    <Compile Include="Checkers\Move.cs" />
+    <Compile Include="Checkers\Piece.cs" />
     <Compile Include="Listener\CheckersListener.cs" />
     <Compile Include="Listener\RequestBody.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Renderer\Renderer.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="BootLoader.js" />
+    <Content Include="MoveTest.js" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

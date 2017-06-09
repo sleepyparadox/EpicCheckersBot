@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using EpicCheckersBot.Checkers;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -27,33 +28,45 @@ namespace EpicCheckersBot.Listener
             HttpListenerContext context;
             context = _httpListener.EndGetContext(ar);
 
-            Console.WriteLine("Recieved " + context.Request.RawUrl);
-
-            // Parse board state
-
-            RequestBody request;
-            using (var inStream = new StreamReader(context.Request.InputStream))
+            // Bargain url parsing
+            string responseJavascript;
+            if (context.Request.RawUrl.Contains("base64="))
             {
-                var requestJson = inStream.ReadToEnd();
-                request = JsonConvert.DeserializeObject<RequestBody>(requestJson);
+                var argsBase64 = context.Request.RawUrl.Split(new[] { "base64=" }, StringSplitOptions.None)[1];
+                responseJavascript = GetResponseJavascript(argsBase64);
+            }
+            else
+            {
+                responseJavascript = "console.log(\"Missing base64 argument\")";
             }
 
-            // Todo create best move
-
-            int fromRow = 0;
-            int fromCol = 0;
-            int toRow = 0;
-            int toCol = 1;
-
-            // Return best move
-
-            var responseJavascript = string.Format("BootLoader.MoveUnit({0}, {1}, {2}, {3})", fromRow, fromCol, toRow, toCol);
             using (var outStream = new StreamWriter(context.Response.OutputStream))
             {
                 outStream.Write(responseJavascript);
             }
 
             _httpListener.BeginGetContext(StartRequestProcess, null);
+        }
+
+        public static string GetResponseJavascript(string argsBase64)
+        {
+            var argsBytes = Convert.FromBase64String(argsBase64);
+            var argsJson = Encoding.ASCII.GetString(argsBytes);
+
+            var args = JsonConvert.DeserializeObject<RequestBody>(argsJson);
+
+            var game = new Game(new Board(args.Board));
+            game.Board.RenderToConsole();
+
+            var bestMove = game.GetBestMove(args.Turn);
+
+            var javascipt = string.Format("BootLoader.MoveUnit({0}, {1}, {2}, {3});", bestMove.From.row, bestMove.From.col, bestMove.To.row, bestMove.To.col);
+
+            Console.WriteLine("Response:");
+            Console.WriteLine(javascipt);
+
+            // Return best move ... as javascript
+            return javascipt;
         }
     }
 }
