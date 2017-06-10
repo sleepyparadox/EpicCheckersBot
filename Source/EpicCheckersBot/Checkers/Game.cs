@@ -16,36 +16,75 @@ namespace EpicCheckersBot.Checkers
             Board = board;
         }
 
-        public Move GetBestMove(Piece color)
+        public Move? GetBestMove(Piece color)
         {
             var allMoves = GetAllMoves(color).ToArray();
+
+            if (allMoves.Length == 0)
+                return null;
 
             // todo logical choice
             var rand = new Random();
             return allMoves[rand.Next(allMoves.Length)];
         }
 
-        public static void RunPracticeGame()
+        public static void RunPracticeGame(int maxMoves = 70)
         {
             var game = new Game(new Board(newGame: true));
-            Action drawToConsole = () =>
+            Action redraw = () =>
             {
-                game.Board.RenderToConsole();
-                Thread.Sleep(500);
+                Renderer.Renderer.RenderToConsole(game.Board);
+                Console.WriteLine("Round {0}", game.Board.Round);
+                Thread.Sleep(100);
             };
 
-            while (true)
+            redraw();
+            while (game.Board.Round < Board.EndsAtRound)
             {
-                drawToConsole();
+                // blue turn
+                {
+                    var blueMove = game.GetBestMove(Piece.Blue);
+                    if (blueMove == null)
+                        break;
 
-                var blueMove = game.GetBestMove(Piece.Blue);
-                game.Board.Move(blueMove.From, blueMove.To);
+                    // apply
+                    game.Board.PushMove(blueMove.Value);
+                    redraw();
+                }
+               
+                // red turn
+                {
+                    var redMove = game.GetBestMove(Piece.Red);
+                    if (redMove == null)
+                        break;
 
-                drawToConsole();
-
-                var redMove = game.GetBestMove(Piece.Red);
-                game.Board.Move(redMove.From, redMove.To);
+                    // apply
+                    game.Board.PushMove(redMove.Value);
+                    redraw();
+                }
             }
+            redraw();
+
+            var bluePieces = game.Board.GetAllPieces(Piece.Blue).Count();
+            var redPieces = game.Board.GetAllPieces(Piece.Red).Count();
+
+            if (bluePieces > redPieces)
+                Console.WriteLine("Blue Wins");
+            else if (redPieces > bluePieces)
+                Console.WriteLine("Red Wins");
+            else
+                Console.WriteLine("It's a tie");
+
+            Thread.Sleep(500);
+
+            // Undo all moves
+            while (game.Board.MoveStackSize > 0)
+            {
+                redraw();
+                game.Board.PopMove();
+            }
+
+            redraw();
         }
 
         public IEnumerable<Move> GetAllMoves(Piece color)
@@ -53,7 +92,7 @@ namespace EpicCheckersBot.Checkers
             foreach(var movablePiece in Board.GetAllPieces().Where(p => p.Value == color))
             {
                 var from = movablePiece.Key;
-                foreach(var direction in BoardPoint.GetAllPoints())
+                foreach(var direction in BoardPoint.GetAllDirections())
                 {
                     foreach (var to in Board.GetEmptySpots(from, direction))
                     {

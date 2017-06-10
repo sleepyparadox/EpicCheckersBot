@@ -9,18 +9,23 @@ namespace EpicCheckersBot.Checkers
     public class Board
     {
         public const int Width = 8;
-        public int _round;
+        public const int EndsAtRound = 61;
+        public int MoveStackSize { get { return _moveStack.Count; } }
+        public int Round { get; private set; }
+
         Piece?[][] _pieces;
+        Dictionary<int, List<KeyValuePair<BoardPoint, Piece>>> _captureHistory = new Dictionary<int, List<KeyValuePair<BoardPoint, Piece>>>();
+        Stack<Move> _moveStack = new Stack<Move>();
 
         public Board(int round, Piece?[][] pieces)
         {
-            _round = round;
+            Round = round;
             _pieces = pieces;
         }
 
         public Board(bool newGame)
         {
-            _round = 0;
+            Round = 0;
             _pieces = new Piece?[8][];
             for (int row = 0; row < Width; row++)
                 _pieces[row] = new Piece?[Width];
@@ -34,20 +39,125 @@ namespace EpicCheckersBot.Checkers
                 }
             }
         }
-
-        public void RenderToConsole()
+        
+        public void PushMove(Move move)
         {
-            Renderer.Renderer.RenderToConsole(_pieces);
+            var piece = GetPieceAt(move.From);
+
+            SetPieceAt(move.From, null);
+            SetPieceAt(move.To, piece);
+
+            var captures = new List<KeyValuePair<BoardPoint, Piece>>();
+
+            foreach(var direction in BoardPoint.GetAllDirections())
+            {
+                // did it chain any combos?
+                var killsThisDirection = CheckForChain(move.To, direction);
+                if(killsThisDirection != null)
+                    captures.AddRange(killsThisDirection);
+            }
+
+            //rows
+            {
+                var rowDoubles = CheckForDoubles(move.To, move.To + BoardPoint.Left, move.To + BoardPoint.Right);
+                if (rowDoubles != null)
+                    captures.AddRange(rowDoubles);
+            }
+
+            //cols
+            {
+                var colDoubles = CheckForDoubles(move.To, move.To + BoardPoint.Up, move.To + BoardPoint.Down);
+                if (colDoubles != null)
+                    captures.AddRange(colDoubles);
+            }
+
+            if (captures.Any())
+            {
+                // remove duplicated captures
+                var distinctPointPiece = new BoardPoint.ComparePointPiece();
+                captures = captures.Distinct(distinctPointPiece).ToList();
+
+                foreach (var capturePoint in captures.Select(p => p.Key))
+                {
+                    SetPieceAt(capturePoint, null);
+                }
+
+                _captureHistory.Add(Round, captures);
+            }
+
+            Round++;
+            _moveStack.Push(move);
         }
 
-        public void Move(BoardPoint from, BoardPoint to)
+        public void PopMove()
         {
-            var piece = GetPieceAt(from);
+            var move = _moveStack.Pop();
+            Round--;
 
-            SetPieceAt(from, null);
-            SetPieceAt(to, piece);
+            var movedPiece = GetPieceAt(move.To).Value;
 
-            _round++;
+            // move it back
+            SetPieceAt(move.To, null);
+            SetPieceAt(move.From, movedPiece);
+
+            // uncapture pieces
+            if(_captureHistory.ContainsKey(Round))
+            {
+                foreach(var capture in _captureHistory[Round])
+                {
+                    SetPieceAt(capture.Key, capture.Value);
+                }
+                _captureHistory.Remove(Round);
+            }
+        }
+
+        public IEnumerable<KeyValuePair<BoardPoint, Piece>> CheckForChain(BoardPoint piecePoint, BoardPoint direction)
+        {
+            var myColor = GetPieceAt(piecePoint).Value;
+            var theirColor = myColor.GetOpponentColor();
+
+            var chain = new List<KeyValuePair<BoardPoint, Piece>>();
+            var targetPoint = piecePoint;
+
+            targetPoint += direction;
+            Piece? targetPiece;
+            while (WithinBoard(targetPoint) && (targetPiece = GetPieceAt(targetPoint)).HasValue)
+            {
+                if (targetPiece == theirColor)
+                {
+                    chain.Add(new KeyValuePair<BoardPoint, Piece>(targetPoint, targetPiece.Value));
+                }
+                else if (targetPiece == myColor)
+                {
+                    if (chain.Any())
+                        return chain;
+                    else
+                        return null;
+                }
+                targetPoint += direction;
+            }
+
+            // Never finished chain fail
+            return null;
+        }
+
+        public IEnumerable<KeyValuePair<BoardPoint, Piece>> CheckForDoubles(BoardPoint piecePoint, BoardPoint sideA, BoardPoint sideB)
+        {
+            var myColor = GetPieceAt(piecePoint).Value;
+            var theirColor = myColor.GetOpponentColor();
+
+            if (GetPieceAt(sideA) == theirColor && GetPieceAt(sideB) == theirColor)
+            {
+                return new[]
+                {
+                    new KeyValuePair<BoardPoint, Piece>(sideA, theirColor),
+                    new KeyValuePair<BoardPoint, Piece>(sideB, theirColor),
+                };
+            }
+            else
+            {
+                return null;
+            }
         }
 
         public IEnumerable<BoardPoint> GetEmptySpots(BoardPoint piecePoint, BoardPoint direction)
@@ -62,9 +172,14 @@ namespace EpicCheckersBot.Checkers
             }
         }
 
+        public IEnumerable<KeyValuePair<BoardPoint, Piece?>> GetAllPieces(Piece color)
+        {
+            return GetAllPieces().Where(p => p.Value == color);
+        }
+
         public IEnumerable<KeyValuePair<BoardPoint, Piece?>> GetAllPieces()
         {
-            var shrink = GetShrink(_round);
+            var shrink = GetShrink(Round);
             for (int row = shrink; row < Width - shrink; row++)
             {
                 for (int col = shrink; col < Width - shrink; col++)
@@ -84,6 +199,9 @@ namespace EpicCheckersBot.Checkers
 
         public Piece? GetPieceAt(int row, int col)
         {
+            if (WithinBoard(row, col) == false)
+                return null; // board is shrinking
+
             return _pieces[row][col];
         }
 
@@ -107,7 +225,7 @@ namespace EpicCheckersBot.Checkers
 
         public bool WithinBoard(int row, int col)
         {
-            var shrink = GetShrink(_round);
+            var shrink = GetShrink(Round);
             return row >= shrink
                 && row < Width - shrink
                 && col >= shrink
@@ -119,7 +237,7 @@ namespace EpicCheckersBot.Checkers
             // kills do resolve first
             // board shrinks as final step of 30th, 50th and 60th turns
 
-            if (round >= 61) 
+            if (round >= EndsAtRound) 
                 return 3;
             else if (round >= 51)
                 return 2;

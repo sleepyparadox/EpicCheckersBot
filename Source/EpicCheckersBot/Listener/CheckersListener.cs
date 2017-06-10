@@ -56,17 +56,27 @@ namespace EpicCheckersBot.Listener
             var args = JsonConvert.DeserializeObject<RequestBody>(argsJson);
 
             var game = new Game(new Board(args.Round, args.Board));
-            game.Board.RenderToConsole();
+            Renderer.Renderer.RenderToConsole(game.Board);
 
             var bestMove = game.GetBestMove(args.Turn);
 
-            var javascipt = string.Format("BootLoader.MoveUnit({0}, {1}, {2}, {3});", bestMove.From.row, bestMove.From.col, bestMove.To.row, bestMove.To.col);
+            string javascript;
+            if(bestMove.HasValue)
+            {
+                var from = bestMove.Value.From;
+                var to = bestMove.Value.To;
+                javascript = string.Format("BootLoader.MoveUnit({0}, {1}, {2}, {3});", from.row, from.col, to.row, to.col);
+            }
+            else
+            {
+                javascript = "console.log(\"couldn't find a move sorry\")";
+            }
 
             Console.WriteLine("Response:");
-            Console.WriteLine(javascipt);
+            Console.WriteLine(javascript);
 
             // Return best move ... as javascript
-            return javascipt;
+            return javascript;
         }
     }
 }

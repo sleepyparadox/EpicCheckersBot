@@ -28,7 +28,7 @@ namespace EpicCheckersBot.Checkers
             return new BoardPoint(p1.row + p2.row, p1.col + p2.col);
         }
 
-        public static IEnumerable<BoardPoint> GetAllPoints()
+        public static IEnumerable<BoardPoint> GetAllDirections()
         {
             yield return Left;
             yield return Right;
@@ -39,6 +39,20 @@ namespace EpicCheckersBot.Checkers
         public override string ToString()
         {
             return string.Format("[{0}, {1}]", row, col);
+        }
+
+        public class ComparePointPiece : EqualityComparer<KeyValuePair<BoardPoint, Piece>>
+        {
+            public override bool Equals(KeyValuePair<BoardPoint, Piece> left, KeyValuePair<BoardPoint, Piece> right)
+            {
+                return left.Key.row == right.Key.row 
+                    && left.Key.col == right.Key.col;
+            }
+
+            public override int GetHashCode(KeyValuePair<BoardPoint, Piece> pair)
+            {
+                return pair.Key.row.GetHashCode() ^ pair.Key.col.GetHashCode(); 
+            }
         }
     }
 }

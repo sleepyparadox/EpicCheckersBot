@@ -9,17 +9,23 @@ namespace EpicCheckersBot.Renderer
 {
     public class Renderer
     {
-        public static void RenderToConsole(Piece?[][] _pieces)
+        public static void RenderToConsole(Board board)
         {
             Console.Clear();
             for (int row = 0; row < Board.Width; row++)
             {
                 for (int col = 0; col < Board.Width; col++)
                 {
-                    WritePieceToConsole(_pieces[row][col]);
+                    if (board.WithinBoard(row, col))
+                        Console.BackgroundColor = ConsoleColor.Gray;
+                    else // flag out of bounds as black
+                        Console.BackgroundColor = ConsoleColor.Black;
+
+                    WritePieceToConsole(board.GetPieceAt(row, col));
                 }
                 Console.Write("\n");
             }
+            Console.BackgroundColor = ConsoleColor.Black;
             Console.ForegroundColor = ConsoleColor.White;
         }
 

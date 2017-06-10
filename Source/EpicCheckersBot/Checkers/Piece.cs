@@ -11,4 +11,20 @@ namespace EpicCheckersBot.Checkers
         Blue,
         Red,
     }
+
+    public static class PieceExtensionMethods
+    {
+        public static Piece GetOpponentColor(this Piece piece)
+        {
+            switch(piece)
+            {
+                case Piece.Blue:
+                    return Piece.Red;
+                case Piece.Red:
+                    return Piece.Blue;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+    }
 }
