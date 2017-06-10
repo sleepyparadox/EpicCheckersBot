@@ -17,7 +17,7 @@ namespace EpicCheckersBot.Listener
         public void Start()
         {
             _httpListener = new HttpListener();
-            _httpListener.Prefixes.Add("http://localhost/");
+            _httpListener.Prefixes.Add("http://*:80/");
             _httpListener.Start();
 
             _httpListener.BeginGetContext(StartRequestProcess, null);
@@ -28,55 +28,71 @@ namespace EpicCheckersBot.Listener
             HttpListenerContext context;
             context = _httpListener.EndGetContext(ar);
 
-            // Bargain url parsing
-            string responseJavascript;
-            if (context.Request.RawUrl.Contains("base64="))
+            //try
             {
-                var argsBase64 = context.Request.RawUrl.Split(new[] { "base64=" }, StringSplitOptions.None)[1];
-                responseJavascript = GetResponseJavascript(argsBase64);
-            }
-            else
-            {
-                responseJavascript = "console.log(\"Missing base64 argument\")";
-            }
+                // Bargain url parsing
+                string requestJson;
+                using (var inStream = new StreamReader(context.Request.InputStream))
+                {
+                    requestJson = inStream.ReadToEnd();
+                }
 
-            using (var outStream = new StreamWriter(context.Response.OutputStream))
+                object result;
+                if(context.Request.HttpMethod == "POST")
+                {
+                    var requestParsed = JsonConvert.DeserializeObject<RequestBody>(requestJson);
+                    result = GetNextMove(requestParsed);
+                }
+                else
+                {
+                    result = true;
+                }
+               
+                var resultJson = JsonConvert.SerializeObject(result);
+
+                Console.WriteLine("Response:");
+                Console.WriteLine(resultJson);
+
+                // Set all these headers so browers at http://epiccheckers.appspot.com/ can connect here
+                context.Response.AddHeader("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With");
+                context.Response.AddHeader("Access-Control-Allow-Methods", "GET, POST");
+                context.Response.AddHeader("Access-Control-Max-Age", "1728000");
+                context.Response.AppendHeader("Access-Control-Allow-Origin", "*");
+                context.Response.StatusCode = 200;
+
+                using (var outStream = new StreamWriter(context.Response.OutputStream))
+                {
+                    outStream.Write(resultJson);
+                }
+            }
+            //catch(Exception e)
             {
-                outStream.Write(responseJavascript);
+                //Console.Clear();
+                //Console.WriteLine("Bad request");
+                //Console.WriteLine(e.ToString());
             }
 
             _httpListener.BeginGetContext(StartRequestProcess, null);
         }
 
-        public static string GetResponseJavascript(string argsBase64)
+        public static object GetNextMove(RequestBody request)
         {
-            var argsBytes = Convert.FromBase64String(argsBase64);
-            var argsJson = Encoding.ASCII.GetString(argsBytes);
-
-            var args = JsonConvert.DeserializeObject<RequestBody>(argsJson);
-
-            var game = new Game(new Board(args.Round, args.Board));
+            var game = new Game(new Board(request.Round, request.Board));
             Renderer.Renderer.RenderToConsole(game.Board);
 
-            var bestMove = game.GetBestMove(args.Turn);
-
-            string javascript;
+            var bestMove = game.GetBestMove(request.Turn);
+            
             if(bestMove.HasValue)
             {
                 var from = bestMove.Value.From;
                 var to = bestMove.Value.To;
-                javascript = string.Format("BootLoader.MoveUnit({0}, {1}, {2}, {3});", from.row, from.col, to.row, to.col);
+
+                return new int[] { from.row, from.col, to.row, to.col };
             }
             else
             {
-                javascript = "console.log(\"couldn't find a move sorry\")";
+                return "no moves left";
             }
-
-            Console.WriteLine("Response:");
-            Console.WriteLine(javascript);
-
-            // Return best move ... as javascript
-            return javascript;
         }
     }
 }

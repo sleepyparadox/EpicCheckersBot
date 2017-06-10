@@ -16,7 +16,8 @@
 	BootLoader.CurrentSession = null;
 	BootLoader.PlayAsBlue = true;
 	BootLoader.PlayAsRed = true;
-	BootLoader.Url = "http://localhost/";
+	//BootLoader.Url = "http://localhost/";
+	BootLoader.Url = "http://ec2-34-205-139-1.compute-1.amazonaws.com/";
 	BootLoader.TimeBetweenStepsMs = 100;
 
 	BootLoader.Run = function(s)
@@ -73,16 +74,25 @@
 	        }
 	    }
 
-	    console.log("Requesting move");
-	    console.log(requestBody);
-
 	    var requestJson = JSON.stringify(requestBody);
-	    var requestBase64 = btoa(requestJson);
 
-	    var script = document.createElement('script');
-	    script.src = BootLoader.Url + "?base64=" + requestBase64;
+	    console.log("Requesting move");
+	    console.log(requestJson);
 
-	    document.querySelector('head').appendChild(script);
+	    var request = new XMLHttpRequest();
+	    request.open('POST', BootLoader.Url, true);
+	    request.onreadystatechange = function () {
+	        if (request.readyState == 4)
+	        {
+	            console.log("Recieving move");
+	            console.log(request.responseText);
+
+	            var nextMove = JSON.parse(request.responseText);
+	            BootLoader.MoveUnit(nextMove[0], nextMove[1], nextMove[2], nextMove[3]);
+	        }
+	    };
+	    request.setRequestHeader("Content-type", "jsonp");
+	    request.send(requestJson);
 	};
 
 	BootLoader.MoveUnit = function(fromRow, fromCol, toRow, toCol)
@@ -116,5 +126,11 @@
 	BootLoader.CurrentSession = currentSession;
 	BootLoader.Run(currentSession);
 
-	return "Started bootloader as player " + (BootLoader.IsRed ? "Red" : "Blue");
+	var playingAs = [];
+	if (BootLoader.PlayAsBlue)
+	    playingAs.push("Blue");
+	if (BootLoader.PlayAsRed)
+	    playingAs.push("Red");
+
+	return ("Started bootloader as " + playingAs);
 })();
