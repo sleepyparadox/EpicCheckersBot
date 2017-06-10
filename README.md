@@ -25,12 +25,13 @@ BootLoader.TimeBetweenStepsMs = 100;
 ```
 
 ### Building your own server:
+   * Everytime the bot needs to make a move it will POST to a target url and move as per the response
 ###### POST Request url:
  *  Change the BootLoader's target url to your server 
  ```javascript
  BootLoader.Url = "http://ec2-34-205-139-1.compute-1.amazonaws.com/"
  ```
-###### Request body format:
+###### POST Request body format:
  *  Sends game state
  ```json
 {  
@@ -49,7 +50,7 @@ BootLoader.TimeBetweenStepsMs = 100;
 }
  ```
 
-###### Response format:
+###### Server Response format:
 ```javascript
  [ 0, 0, 2, 0 ]
  ```
