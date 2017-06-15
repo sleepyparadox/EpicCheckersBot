@@ -61,7 +61,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="BootLoader.js" />
+    <Content Include="BootLoader.js">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="MoveTest.js" />
   </ItemGroup>
   <ItemGroup>

@@ -12,10 +12,10 @@ namespace EpicCheckersBot
     {
         static void Main(string[] args)
         {
-            Game.RunPracticeGame();
+            //Game.RunPracticeGame();
 
-            //var listener = new CheckersListener();
-            //listener.Start();
+            var listener = new CheckersListener();
+            listener.Start();
 
             //var js = CheckersListener.GetResponseJavascript("eyJUdXJuIjoiUmVkIiwiQm9hcmQiOltbIlJlZCIsIlJlZCIsIlJlZCIsIlJlZCIsIlJlZCIsIlJlZCIsIlJlZCIsIlJlZCJdLFtudWxsLG51bGwsbnVsbCxudWxsLG51bGwsbnVsbCxudWxsLG51bGxdLFtudWxsLG51bGwsbnVsbCxudWxsLG51bGwsbnVsbCxudWxsLG51bGxdLFtudWxsLG51bGwsbnVsbCxudWxsLG51bGwsbnVsbCxudWxsLG51bGxdLFtudWxsLG51bGwsbnVsbCxudWxsLG51bGwsbnVsbCxudWxsLG51bGxdLFtudWxsLG51bGwsbnVsbCxudWxsLG51bGwsbnVsbCxudWxsLG51bGxdLFtudWxsLCJCbHVlIixudWxsLG51bGwsbnVsbCxudWxsLG51bGwsbnVsbF0sWyJCbHVlIixudWxsLCJCbHVlIiwiQmx1ZSIsIkJsdWUiLCJCbHVlIiwiQmx1ZSIsIkJsdWUiXV19");
 

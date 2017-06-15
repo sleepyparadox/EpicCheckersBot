@@ -19,36 +19,88 @@ namespace EpicCheckersBot.Checkers
         Stack<Move> _moveStack = new Stack<Move>();
         //Stack<string> _hashStack = new Stack<string>();
 
-        public float GetScore(Piece color)
+        public float GetScore(Piece color, bool log = false)
         {
             var theirColor = color.GetOpponentColor();
             
             var myPieces = 0;
             var theirPieces = 0;
 
-            foreach (var piece in GetAllPieces())
+            var myValue = 0f;
+            var theirValue = 0f;
+
+            const float PositionWeight = 0.1f;
+
+            foreach (var pair in GetAllPiecePoints())
             {
-                if (piece == color)
+                if (pair.Value == color)
+                {
                     myPieces++;
-                if (piece == theirColor)
+                    myValue++;
+                    myValue += GetScore(pair.Key) * PositionWeight;
+                }
+                if (pair.Value == theirColor)
+                {
                     theirPieces++;
+                    theirValue++;
+                    theirValue += GetScore(pair.Key) * PositionWeight;
+                }
             }
 
             if (theirPieces == 0 && myPieces > 0)
-                return 1f;
+            {
+                if (log)
+                    Console.WriteLine("Score: I win");
+
+                return float.MaxValue;
+            }
 
             if (myPieces == 0 && theirPieces > 0)
-                return -1f;
+            {
+                if (log)
+                    Console.WriteLine("Score: They win");
+
+                return float.MinValue;
+            }
 
             if (Round == EndsAtRound)
             {
+                if (log)
+                    Console.WriteLine("Score: Tie");
                 return 0;
             }
 
-            // -0.5 to 0.5
-            return ((float)myPieces / (myPieces + theirPieces)) - 0.5f;
+            var score = (myValue - theirValue) / (Width + PositionWeight);
+
+            if (log)
+            {
+                Console.WriteLine("My Value: " + myValue);
+                Console.WriteLine("Their Value: " + theirValue);
+                Console.WriteLine("Score: " + score);
+                Console.WriteLine("\n(Max Value: " + (Width + PositionWeight) + ")");
+            }
+
+            return score;
         }
 
+        public float GetScore(BoardPoint point)
+        {
+            float score = 0;
+
+            // control the diagonal
+            if (point.row == point.col)
+                score = 1f;
+
+            const int futureCheck = 6;
+            Round += futureCheck;
+            if (WithinBoard(point) == false)
+            {
+                score = -1;
+            }
+            Round -= futureCheck;
+
+            return score;
+        }
 
         public Piece? GetWinner()
         {
@@ -323,7 +375,7 @@ namespace EpicCheckersBot.Checkers
                 && col < Width - shrink;
         }
 
-        static int GetShrink(int round)
+        public static int GetShrink(int round)
         {
             // kills do resolve first
             // board shrinks as final step of 30th, 50th and 60th turns

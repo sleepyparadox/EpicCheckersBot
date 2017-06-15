@@ -1,6 +1,7 @@
 
 // goto http://epiccheckers.appspot.com/
 // and copy paste this into the console
+// AI will PlayAsRed by default, set config below
 
 (function()
 {
@@ -14,7 +15,7 @@
 		
 	BootLoader.OldTurn = null;
 	BootLoader.CurrentSession = null;
-	BootLoader.PlayAsBlue = true;
+	BootLoader.PlayAsBlue = false;
 	BootLoader.PlayAsRed = true;
 	BootLoader.Url = "http://localhost/";
 	//BootLoader.Url = "http://ec2-34-205-139-1.compute-1.amazonaws.com/";

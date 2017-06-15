@@ -17,10 +17,20 @@ namespace EpicCheckersBot.Checkers
             Board = board;
         }
 
-        public Move? GetBestMove(Piece color, int depth = 3)
+        public Move? GetBestMove(Piece color)
         {
             MovesChecked = 0;
             EndingMovesChecked = 0;
+
+            var enemyColor = color.GetOpponentColor();
+            var enemyPieces = Board.GetAllPieces().Count(p => p == enemyColor);
+
+            // scale depth based on game state
+            var earlyGame = enemyPieces > 2;
+
+            // increase search depth as board shrinks
+            var depth = 3 + (Board.GetShrink(Board.Round + 1) * 2);
+            var strength = 0.5f;
 
             var allMoves = GetAllMoves(color);
 
@@ -29,8 +39,8 @@ namespace EpicCheckersBot.Checkers
 
             foreach(var move in allMoves)
             {
-                var score = GetMoveMiniMax(move, color, depth, float.MinValue, float.MinValue);
-                if(score > bestScore)
+                var score = GetMoveMiniMax(move, color, depth, float.MinValue, float.MinValue, strength);
+                if(score >= bestScore)
                 {
                     bestMove = move;
                     bestScore = score;
@@ -40,7 +50,7 @@ namespace EpicCheckersBot.Checkers
             return bestMove;
         }
 
-        float GetMoveMiniMax(Move move, Piece color, int depthToCheck, float parentScore, float otherParentScore)
+        float GetMoveMiniMax(Move move, Piece color, int depthToCheck, float parentScore, float otherParentScore, float strength)
         {
             MovesChecked++;
 
@@ -67,16 +77,17 @@ namespace EpicCheckersBot.Checkers
             var children = GetAllMoves(childColor);
             foreach (var child in children)
             {
-                var childScore = GetMoveMiniMax(child, childColor, childDepth, 
+                var childScore = GetMoveMiniMax(child, childColor, childDepth,
                     // flip the parent scores
-                    parentScore: otherParentScore, otherParentScore: score);
-                if(childScore > bestChildScore)
+                    parentScore: otherParentScore, otherParentScore: score,
+                    strength: strength);
+                if (childScore > bestChildScore)
                 {
                     bestChild = child;
                     bestChildScore = childScore;
                 }
 
-                if(childScore > 0)
+                if(childScore > strength)
                 {
                     // best for opponent
                     break;
@@ -104,7 +115,7 @@ namespace EpicCheckersBot.Checkers
                 // blue turn
                 {
                     var blueMove = game.GetBestMove(Piece.Blue);
-                    if ((winner = game.Board.GetWinner()).HasValue)
+                    if ((winner = game.Board.GetWinner()).HasValue || blueMove == null)
                         break;
 
                     // apply
@@ -115,7 +126,7 @@ namespace EpicCheckersBot.Checkers
                 // red turn
                 {
                     var redMove = game.GetBestMove(Piece.Red);
-                    if ((winner = game.Board.GetWinner()).HasValue)
+                    if ((winner = game.Board.GetWinner()).HasValue || redMove == null)
                         break;
 
                     // apply
@@ -132,8 +143,13 @@ namespace EpicCheckersBot.Checkers
 
         public IEnumerable<Move> GetAllMoves(Piece color)
         {
+            var i = (Board.Round / 2) % 2;
             foreach(var movablePiece in Board.GetAllPiecePoints().Where(p => p.Value == color))
             {
+                // horrible hack to reduce the number of moves by skipping every second move
+                if (i++ % 2 == 0) 
+                    continue;
+
                 var from = movablePiece.Key;
                 foreach(var direction in BoardPoint.GetAllDirections())
                 {

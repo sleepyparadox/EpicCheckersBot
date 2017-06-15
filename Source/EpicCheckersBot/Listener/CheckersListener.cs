@@ -30,6 +30,8 @@ namespace EpicCheckersBot.Listener
 
             //try
             {
+                Console.WriteLine("Request: " + context.Request.HttpMethod + " " + context.Request.RawUrl);
+
                 // Bargain url parsing
                 string requestJson;
                 using (var inStream = new StreamReader(context.Request.InputStream))
@@ -37,21 +39,25 @@ namespace EpicCheckersBot.Listener
                     requestJson = inStream.ReadToEnd();
                 }
 
-                object result;
+                string responseBody;
                 if(context.Request.HttpMethod == "POST")
                 {
                     var requestParsed = JsonConvert.DeserializeObject<RequestBody>(requestJson);
-                    result = GetNextMove(requestParsed);
+                    var nextMove = GetNextMove(requestParsed);
+                    responseBody = JsonConvert.SerializeObject(nextMove);
+
+                    Console.WriteLine("Response:" + responseBody);
+                }
+                else if(context.Request.HttpMethod == "GET")
+                {
+                    responseBody = File.ReadAllText("BootLoader.js");
+                    Console.WriteLine("Response: BootLoader.js");
                 }
                 else
                 {
-                    result = true;
+                    responseBody = string.Empty;
+                    Console.WriteLine("Response:");
                 }
-               
-                var resultJson = JsonConvert.SerializeObject(result);
-
-                Console.WriteLine("Response:");
-                Console.WriteLine(resultJson);
 
                 // Set all these headers so browers at http://epiccheckers.appspot.com/ can connect here
                 context.Response.AddHeader("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With");
@@ -62,7 +68,7 @@ namespace EpicCheckersBot.Listener
 
                 using (var outStream = new StreamWriter(context.Response.OutputStream))
                 {
-                    outStream.Write(resultJson);
+                    outStream.Write(responseBody);
                 }
             }
             //catch(Exception e)
@@ -79,11 +85,18 @@ namespace EpicCheckersBot.Listener
         {
             var game = new Game(new Board(request.Round, request.Board));
             Renderer.Renderer.RenderToConsole(game.Board);
+            Console.WriteLine("Calculating");
 
             var bestMove = game.GetBestMove(request.Turn);
             
             if(bestMove.HasValue)
             {
+                game.Board.PushMove(bestMove.Value);
+
+                // render result
+                game.Board.GetScore(request.Turn, log: true);
+                Renderer.Renderer.RenderToConsole(game.Board, clearFirst: false);
+
                 var from = bestMove.Value.From;
                 var to = bestMove.Value.To;
 

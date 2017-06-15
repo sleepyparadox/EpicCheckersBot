@@ -9,9 +9,11 @@ namespace EpicCheckersBot.Renderer
 {
     public class Renderer
     {
-        public static void RenderToConsole(Board board)
+        public static void RenderToConsole(Board board, bool clearFirst = true)
         {
-            Console.Clear();
+            if(clearFirst)
+                Console.Clear();
+
             for (int row = 0; row < Board.Width; row++)
             {
                 for (int col = 0; col < Board.Width; col++)
