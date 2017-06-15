@@ -13,5 +13,4 @@ namespace EpicCheckersBot.Listener
         public int Round { get; set; }
         public Piece?[][] Board { get; set;}
     }
-
 }

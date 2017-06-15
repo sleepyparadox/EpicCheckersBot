@@ -10,12 +10,46 @@ namespace EpicCheckersBot.Checkers
     {
         public const int Width = 8;
         public const int EndsAtRound = 61;
+
         public int MoveStackSize { get { return _moveStack.Count; } }
         public int Round { get; private set; }
 
         Piece?[][] _pieces;
         Dictionary<int, List<KeyValuePair<BoardPoint, Piece>>> _captureHistory = new Dictionary<int, List<KeyValuePair<BoardPoint, Piece>>>();
         Stack<Move> _moveStack = new Stack<Move>();
+        //Stack<string> _hashStack = new Stack<string>();
+
+        public Piece? GetWinner()
+        {
+            var reds = 0;
+            var blues = 0;
+            foreach(var piece in GetAllPieces())
+            {
+                if (piece == Piece.Red)
+                    reds++;
+                if (piece == Piece.Blue)
+                    blues++;
+            }
+
+            if (blues == 0 && reds > 0)
+                return Piece.Red;
+
+            if(reds == 0 && blues > 0)
+                return Piece.Blue;
+
+            if (Round == EndsAtRound)
+            {
+                if (blues > reds)
+                    return Piece.Blue;
+                else if (reds > blues)
+                    return Piece.Red;
+                else
+                    return Piece.Winner_Tie;
+            }
+
+            // no winner
+            return null;
+        }
 
         public Board(int round, Piece?[][] pieces)
         {
@@ -42,18 +76,24 @@ namespace EpicCheckersBot.Checkers
         
         public void PushMove(Move move)
         {
+            //var hash = GetBoardHash();
+            //_hashStack.Push(hash);
+
             var piece = GetPieceAt(move.From);
+
+            if (piece == null)
+                throw new NullReferenceException("Move piece");
 
             SetPieceAt(move.From, null);
             SetPieceAt(move.To, piece);
 
             var captures = new List<KeyValuePair<BoardPoint, Piece>>();
 
-            foreach(var direction in BoardPoint.GetAllDirections())
+            foreach (var direction in BoardPoint.GetAllDirections())
             {
                 // did it chain any combos?
                 var killsThisDirection = CheckForChain(move.To, direction);
-                if(killsThisDirection != null)
+                if (killsThisDirection != null)
                     captures.AddRange(killsThisDirection);
             }
 
@@ -109,6 +149,12 @@ namespace EpicCheckersBot.Checkers
                 }
                 _captureHistory.Remove(Round);
             }
+
+            //var hash = GetBoardHash();
+            //var expectedHash = _hashStack.Pop();
+
+            //if (hash != expectedHash)
+            //    throw new Exception("Failed to pop state correctly");
         }
 
         public IEnumerable<KeyValuePair<BoardPoint, Piece>> CheckForChain(BoardPoint piecePoint, BoardPoint direction)
@@ -172,12 +218,12 @@ namespace EpicCheckersBot.Checkers
             }
         }
 
-        public IEnumerable<KeyValuePair<BoardPoint, Piece?>> GetAllPieces(Piece color)
+        public IEnumerable<KeyValuePair<BoardPoint, Piece?>> GetAllPiecePoints(Piece color)
         {
-            return GetAllPieces().Where(p => p.Value == color);
+            return GetAllPiecePoints().Where(p => p.Value == color);
         }
 
-        public IEnumerable<KeyValuePair<BoardPoint, Piece?>> GetAllPieces()
+        public IEnumerable<KeyValuePair<BoardPoint, Piece?>> GetAllPiecePoints()
         {
             var shrink = GetShrink(Round);
             for (int row = shrink; row < Width - shrink; row++)
@@ -188,6 +234,20 @@ namespace EpicCheckersBot.Checkers
                     var piece = GetPieceAt(point);
 
                     yield return new KeyValuePair<BoardPoint, Piece?>(point, piece);
+                }
+            }
+        }
+
+        public IEnumerable<Piece> GetAllPieces()
+        {
+            var shrink = GetShrink(Round);
+            for (int row = shrink; row < Width - shrink; row++)
+            {
+                for (int col = shrink; col < Width - shrink; col++)
+                {
+                    var piece = GetPieceAt(row, col);
+                    if(piece.HasValue)
+                        yield return piece.Value;
                 }
             }
         }
@@ -245,6 +305,27 @@ namespace EpicCheckersBot.Checkers
                 return 1;
             else
                 return 0;
+        }
+
+        string GetBoardHash()
+        {
+            var builder = new StringBuilder((Width) * Width);
+            var shrink = GetShrink(Round);
+            for (int row = shrink; row < Width - shrink; row++)
+            {
+                for (int col = shrink; col < Width - shrink; col++)
+                {
+                    var piece = GetPieceAt(row, col);
+                    if (piece == Piece.Red)
+                        builder.Append('R');
+                    else if (piece == Piece.Blue)
+                        builder.Append('B');
+                    else
+                        builder.Append(' ');
+                }
+                //builder.Append('\n');
+            }
+            return builder.ToString();
         }
     }
 }

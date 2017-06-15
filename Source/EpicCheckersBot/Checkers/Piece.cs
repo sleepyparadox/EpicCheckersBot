@@ -10,6 +10,8 @@ namespace EpicCheckersBot.Checkers
     {
         Blue,
         Red,
+
+        Winner_Tie,
     }
 
     public static class PieceExtensionMethods

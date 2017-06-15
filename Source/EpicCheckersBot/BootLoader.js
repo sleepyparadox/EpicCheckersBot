@@ -16,8 +16,8 @@
 	BootLoader.CurrentSession = null;
 	BootLoader.PlayAsBlue = true;
 	BootLoader.PlayAsRed = true;
-	//BootLoader.Url = "http://localhost/";
-	BootLoader.Url = "http://ec2-34-205-139-1.compute-1.amazonaws.com/";
+	BootLoader.Url = "http://localhost/";
+	//BootLoader.Url = "http://ec2-34-205-139-1.compute-1.amazonaws.com/";
 	BootLoader.TimeBetweenStepsMs = 100;
 
 	BootLoader.Run = function(s)

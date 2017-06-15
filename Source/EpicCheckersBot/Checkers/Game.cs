@@ -10,7 +10,8 @@ namespace EpicCheckersBot.Checkers
     public class Game
     {
         public readonly Board Board;
-
+        static int MovesChecked = 0;
+        static int EndingMovesChecked = 0;
         public Game(Board board)
         {
             Board = board;
@@ -18,33 +19,99 @@ namespace EpicCheckersBot.Checkers
 
         public Move? GetBestMove(Piece color)
         {
+            MovesChecked = 0;
+            EndingMovesChecked = 0;
+
             var allMoves = GetAllMoves(color).ToArray();
 
             if (allMoves.Length == 0)
                 return null;
 
-            // todo logical choice
-            var rand = new Random();
-            return allMoves[rand.Next(allMoves.Length)];
+            Move bestMove = new Move();
+            var bestScore = int.MinValue;
+
+            foreach(var move in allMoves)
+            {
+                var score = GetMoveMiniMax(move, color);
+                if(score > bestScore)
+                {
+                    bestMove = move;
+                    bestScore = score;
+                }
+            }
+
+            return bestMove;
         }
 
-        public static void RunPracticeGame(int maxMoves = 70)
+        int GetMoveMiniMax(Move move, Piece color)
+        {
+            MovesChecked++;
+
+            Board.PushMove(move);
+
+            var winner = Board.GetWinner();
+
+            if(winner.HasValue)
+            {
+                int score;
+                if (winner == color)
+                    score = 1;
+                else if (winner == Piece.Winner_Tie)
+                    score = 0;
+                else
+                    score = -1;
+
+                EndingMovesChecked++;
+
+                Board.PopMove();
+
+                return score;
+            }
+
+            Move bestChild = new Move();
+            var bestChildScore = int.MinValue;
+
+            var childColor = color.GetOpponentColor();
+            var children = GetAllMoves(childColor).ToArray();
+            foreach (var child in children)
+            {
+                var childScore = GetMoveMiniMax(child, childColor);
+                if(childScore > bestChildScore)
+                {
+                    bestChild = child;
+                    bestChildScore = childScore;
+                }
+
+                if(childScore == 1)
+                {
+                    // opponent will win, no need to check anymore
+                    break;
+                }
+            }
+
+            Board.PopMove();
+
+            return (bestChildScore * -1);
+        }
+
+        public static void RunPracticeGame()
         {
             var game = new Game(new Board(newGame: true));
             Action redraw = () =>
             {
                 Renderer.Renderer.RenderToConsole(game.Board);
                 Console.WriteLine("Round {0}", game.Board.Round);
-                Thread.Sleep(100);
+                Thread.Sleep(500);
             };
 
             redraw();
-            while (game.Board.Round < Board.EndsAtRound)
+            Piece? winner;
+            while (true)
             {
                 // blue turn
                 {
                     var blueMove = game.GetBestMove(Piece.Blue);
-                    if (blueMove == null)
+                    if ((winner = game.Board.GetWinner()).HasValue)
                         break;
 
                     // apply
@@ -55,7 +122,7 @@ namespace EpicCheckersBot.Checkers
                 // red turn
                 {
                     var redMove = game.GetBestMove(Piece.Red);
-                    if (redMove == null)
+                    if ((winner = game.Board.GetWinner()).HasValue)
                         break;
 
                     // apply
@@ -65,31 +132,14 @@ namespace EpicCheckersBot.Checkers
             }
             redraw();
 
-            var bluePieces = game.Board.GetAllPieces(Piece.Blue).Count();
-            var redPieces = game.Board.GetAllPieces(Piece.Red).Count();
+            Console.WriteLine("Winner is " + winner.Value);
 
-            if (bluePieces > redPieces)
-                Console.WriteLine("Blue Wins");
-            else if (redPieces > bluePieces)
-                Console.WriteLine("Red Wins");
-            else
-                Console.WriteLine("It's a tie");
-
-            Thread.Sleep(500);
-
-            // Undo all moves
-            while (game.Board.MoveStackSize > 0)
-            {
-                redraw();
-                game.Board.PopMove();
-            }
-
-            redraw();
+            Thread.Sleep(2500);
         }
 
         public IEnumerable<Move> GetAllMoves(Piece color)
         {
-            foreach(var movablePiece in Board.GetAllPieces().Where(p => p.Value == color))
+            foreach(var movablePiece in Board.GetAllPiecePoints().Where(p => p.Value == color))
             {
                 var from = movablePiece.Key;
                 foreach(var direction in BoardPoint.GetAllDirections())
