@@ -17,22 +17,19 @@ namespace EpicCheckersBot.Checkers
             Board = board;
         }
 
-        public Move? GetBestMove(Piece color)
+        public Move? GetBestMove(Piece color, int depth = 3)
         {
             MovesChecked = 0;
             EndingMovesChecked = 0;
 
-            var allMoves = GetAllMoves(color).ToArray();
+            var allMoves = GetAllMoves(color);
 
-            if (allMoves.Length == 0)
-                return null;
-
-            Move bestMove = new Move();
-            var bestScore = int.MinValue;
+            Move? bestMove = null;
+            var bestScore = float.MinValue;
 
             foreach(var move in allMoves)
             {
-                var score = GetMoveMiniMax(move, color);
+                var score = GetMoveMiniMax(move, color, depth, float.MinValue, float.MinValue);
                 if(score > bestScore)
                 {
                     bestMove = move;
@@ -43,54 +40,50 @@ namespace EpicCheckersBot.Checkers
             return bestMove;
         }
 
-        int GetMoveMiniMax(Move move, Piece color)
+        float GetMoveMiniMax(Move move, Piece color, int depthToCheck, float parentScore, float otherParentScore)
         {
             MovesChecked++;
 
             Board.PushMove(move);
 
-            var winner = Board.GetWinner();
-
-            if(winner.HasValue)
+            var score = Board.GetScore(color);
+            if (score >= 1 // win
+                || score < parentScore // worse than parent
+                || depthToCheck <= 1) 
             {
-                int score;
-                if (winner == color)
-                    score = 1;
-                else if (winner == Piece.Winner_Tie)
-                    score = 0;
-                else
-                    score = -1;
-
                 EndingMovesChecked++;
 
+                // game ended or this is last node we can aford to check
                 Board.PopMove();
-
                 return score;
             }
 
-            Move bestChild = new Move();
-            var bestChildScore = int.MinValue;
 
+            Move bestChild = new Move();
+            var bestChildScore = float.MinValue;
+
+            var childDepth = depthToCheck - 1;
             var childColor = color.GetOpponentColor();
-            var children = GetAllMoves(childColor).ToArray();
+            var children = GetAllMoves(childColor);
             foreach (var child in children)
             {
-                var childScore = GetMoveMiniMax(child, childColor);
+                var childScore = GetMoveMiniMax(child, childColor, childDepth, 
+                    // flip the parent scores
+                    parentScore: otherParentScore, otherParentScore: score);
                 if(childScore > bestChildScore)
                 {
                     bestChild = child;
                     bestChildScore = childScore;
                 }
 
-                if(childScore == 1)
+                if(childScore > 0)
                 {
-                    // opponent will win, no need to check anymore
+                    // best for opponent
                     break;
                 }
             }
 
             Board.PopMove();
-
             return (bestChildScore * -1);
         }
 

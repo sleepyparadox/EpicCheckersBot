@@ -19,6 +19,37 @@ namespace EpicCheckersBot.Checkers
         Stack<Move> _moveStack = new Stack<Move>();
         //Stack<string> _hashStack = new Stack<string>();
 
+        public float GetScore(Piece color)
+        {
+            var theirColor = color.GetOpponentColor();
+            
+            var myPieces = 0;
+            var theirPieces = 0;
+
+            foreach (var piece in GetAllPieces())
+            {
+                if (piece == color)
+                    myPieces++;
+                if (piece == theirColor)
+                    theirPieces++;
+            }
+
+            if (theirPieces == 0 && myPieces > 0)
+                return 1f;
+
+            if (myPieces == 0 && theirPieces > 0)
+                return -1f;
+
+            if (Round == EndsAtRound)
+            {
+                return 0;
+            }
+
+            // -0.5 to 0.5
+            return ((float)myPieces / (myPieces + theirPieces)) - 0.5f;
+        }
+
+
         public Piece? GetWinner()
         {
             var reds = 0;
