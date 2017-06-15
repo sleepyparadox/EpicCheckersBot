@@ -70,6 +70,20 @@ namespace EpicCheckersBot.Checkers
                 return 0;
             }
 
+            if(theirPieces == 1)
+            {
+                var theirPiece = GetAllPiecePoints(theirColor).First();
+                foreach(var direction in BoardPoint.GetAllDirections())
+                {
+                    if(GetPieceAt(theirPiece.Key + direction) == color)
+                    {
+                        // go for the kill already!
+                        theirValue /= 2f;
+                        break;
+                    }
+                }
+            }
+
             var score = (myValue - theirValue) / (Width + PositionWeight);
 
             if (log)
@@ -89,15 +103,20 @@ namespace EpicCheckersBot.Checkers
 
             // control the diagonal
             if (point.row == point.col)
-                score = 1f;
+                score += 1f;
 
-            const int futureCheck = 6;
-            Round += futureCheck;
-            if (WithinBoard(point) == false)
-            {
-                score = -1;
-            }
-            Round -= futureCheck;
+            if (point.row >= 3 && point.row <= 4)
+                score += 0.2f;
+
+            if (point.col >= 3 && point.col <= 4)
+                score += 0.2f;
+
+            var shrink = GetShrink(Round + 5);
+            if (point.row < shrink || point.row > Width - shrink)
+                score -= 2f;
+
+            if (point.col < shrink || point.col > Width - shrink)
+                score -= 2f;
 
             return score;
         }

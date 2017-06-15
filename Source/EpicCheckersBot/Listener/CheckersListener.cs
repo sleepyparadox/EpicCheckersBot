@@ -28,7 +28,7 @@ namespace EpicCheckersBot.Listener
             HttpListenerContext context;
             context = _httpListener.EndGetContext(ar);
 
-            //try
+            try
             {
                 Console.WriteLine("Request: " + context.Request.HttpMethod + " " + context.Request.RawUrl);
 
@@ -71,11 +71,11 @@ namespace EpicCheckersBot.Listener
                     outStream.Write(responseBody);
                 }
             }
-            //catch(Exception e)
+            catch(Exception e)
             {
-                //Console.Clear();
-                //Console.WriteLine("Bad request");
-                //Console.WriteLine(e.ToString());
+                Console.Clear();
+                Console.WriteLine("Bad request");
+                Console.WriteLine(e.ToString());
             }
 
             _httpListener.BeginGetContext(StartRequestProcess, null);
@@ -91,10 +91,20 @@ namespace EpicCheckersBot.Listener
             
             if(bestMove.HasValue)
             {
+                // render result
+                Console.ForegroundColor = ConsoleColor.Gray;
+                var oldScore = game.Board.GetScore(request.Turn, log: true);
+
                 game.Board.PushMove(bestMove.Value);
 
                 // render result
-                game.Board.GetScore(request.Turn, log: true);
+                Console.ForegroundColor = ConsoleColor.White;
+                var newScore =  game.Board.GetScore(request.Turn, log: true);
+
+                Console.ForegroundColor = ConsoleColor.Gray;
+                Console.WriteLine("{0} to {1} {2}", oldScore, newScore, Game.IsGreatScore(newScore, oldScore, false) ? "GREAT" : "");
+
+                Console.ForegroundColor = ConsoleColor.White;
                 Renderer.Renderer.RenderToConsole(game.Board, clearFirst: false);
 
                 var from = bestMove.Value.From;

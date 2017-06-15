@@ -22,24 +22,26 @@ namespace EpicCheckersBot.Checkers
             MovesChecked = 0;
             EndingMovesChecked = 0;
 
-            var enemyColor = color.GetOpponentColor();
-            var enemyPieces = Board.GetAllPieces().Count(p => p == enemyColor);
-
-            // scale depth based on game state
-            var earlyGame = enemyPieces > 2;
+            var totalPieces = Board.GetAllPieces().Count();
 
             // increase search depth as board shrinks
-            var depth = 3 + (Board.GetShrink(Board.Round + 1) * 2);
-            var strength = 0.5f;
+            var earlyGame = Board.GetShrink(Board.Round + 3) < 2 && totalPieces > 5;
 
-            var allMoves = GetAllMoves(color);
+            var depth = earlyGame ? 3 : 5;
+            var allMoves = GetAllMoves(color, earlyGame).ToArray();
+
+            if(earlyGame && allMoves.Any() == false)
+            {
+                // forget cheap early game I need some moves
+                allMoves = GetAllMoves(color, false).ToArray();
+            }
 
             Move? bestMove = null;
             var bestScore = float.MinValue;
 
             foreach(var move in allMoves)
             {
-                var score = GetMoveMiniMax(move, color, depth, float.MinValue, float.MinValue, strength);
+                var score = GetMoveMiniMax(move, color, depth, float.MinValue, float.MinValue, earlyGame);
                 if(score >= bestScore)
                 {
                     bestMove = move;
@@ -50,7 +52,18 @@ namespace EpicCheckersBot.Checkers
             return bestMove;
         }
 
-        float GetMoveMiniMax(Move move, Piece color, int depthToCheck, float parentScore, float otherParentScore, float strength)
+        public static bool IsGreatScore(float score, float parentScore, bool earlyGame)
+        {
+            if (score >= 1f)
+                return true;
+            if (earlyGame && score > 0.15f)
+                return true;
+            if (parentScore > -100f && score > parentScore + 0.10f)
+                return true;
+            return false;
+        }
+
+        float GetMoveMiniMax(Move move, Piece color, int depthToCheck, float parentScore, float otherParentScore, bool earlyGame)
         {
             MovesChecked++;
 
@@ -59,6 +72,7 @@ namespace EpicCheckersBot.Checkers
             var score = Board.GetScore(color);
             if (score >= 1 // win
                 || score < parentScore // worse than parent
+                || IsGreatScore(score, parentScore, earlyGame)
                 || depthToCheck <= 1) 
             {
                 EndingMovesChecked++;
@@ -68,26 +82,26 @@ namespace EpicCheckersBot.Checkers
                 return score;
             }
 
-
             Move bestChild = new Move();
             var bestChildScore = float.MinValue;
 
             var childDepth = depthToCheck - 1;
             var childColor = color.GetOpponentColor();
-            var children = GetAllMoves(childColor);
+            var children = GetAllMoves(childColor, earlyGame);
             foreach (var child in children)
             {
                 var childScore = GetMoveMiniMax(child, childColor, childDepth,
-                    // flip the parent scores
-                    parentScore: otherParentScore, otherParentScore: score,
-                    strength: strength);
+                                                // flip the parent scores
+                                                otherParentScore, score, 
+                                                earlyGame);
+
                 if (childScore > bestChildScore)
                 {
                     bestChild = child;
                     bestChildScore = childScore;
                 }
 
-                if(childScore > strength)
+                if(IsGreatScore(bestChildScore, otherParentScore, earlyGame))
                 {
                     // best for opponent
                     break;
@@ -141,13 +155,13 @@ namespace EpicCheckersBot.Checkers
             Thread.Sleep(2500);
         }
 
-        public IEnumerable<Move> GetAllMoves(Piece color)
+        public IEnumerable<Move> GetAllMoves(Piece color, bool earlyGame)
         {
             var i = (Board.Round / 2) % 2;
             foreach(var movablePiece in Board.GetAllPiecePoints().Where(p => p.Value == color))
             {
                 // horrible hack to reduce the number of moves by skipping every second move
-                if (i++ % 2 == 0) 
+                if (earlyGame && i++ % 2 == 0) 
                     continue;
 
                 var from = movablePiece.Key;
