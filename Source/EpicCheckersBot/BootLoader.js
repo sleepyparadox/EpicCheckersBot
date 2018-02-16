@@ -15,10 +15,8 @@
 		
 	BootLoader.OldTurn = null;
 	BootLoader.CurrentSession = null;
-	BootLoader.PlayAsBlue = false;
-	BootLoader.PlayAsRed = true;
-	//BootLoader.Url = "http://localhost/";
-	BootLoader.Url = "http://ec2-34-205-139-1.compute-1.amazonaws.com/";
+	BootLoader.BlueUrl = "http://ec2-34-205-139-1.compute-1.amazonaws.com/";
+	BootLoader.RedUrl = null; // null is human player
 	BootLoader.TimeBetweenStepsMs = 100;
 
 	BootLoader.Run = function(s)
@@ -35,10 +33,13 @@
 	{
 	    if(gameData.turn != BootLoader.OldTurn && gameData.state === "playing")
 	    {
-	        if ((gameData.turn === true && BootLoader.PlayAsRed)
-                || (gameData.turn === false && BootLoader.PlayAsBlue))
+	        if (gameData.turn === true && BootLoader.RedUrl != null)
+			{
+				BootLoader.TurnStarted(BootLoader.RedUrl);
+			}
+            else if(gameData.turn === false && BootLoader.BlueUrl != null)
 	        {
-	            BootLoader.TurnStarted();
+	            BootLoader.TurnStarted(BootLoader.BlueUrl);
 	        }
 	        else
 	        {
@@ -48,7 +49,7 @@
 	    }	
 	};
 	
-	BootLoader.TurnStarted = function()
+	BootLoader.TurnStarted = function(botUrl)
 	{
 	    // Blue, false, 0, 
 	    // Red, true, 1, 
@@ -81,7 +82,7 @@
 	    console.log(requestJson);
 
 	    var request = new XMLHttpRequest();
-	    request.open('POST', BootLoader.Url, true);
+	    request.open('POST', botUrl, true);
 	    request.onreadystatechange = function () {
 	        if (request.readyState == 4)
 	        {
